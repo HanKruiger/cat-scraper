@@ -3,21 +3,15 @@
 import os
 import logging as log
 
-import requests
 from dotenv import load_dotenv, find_dotenv
 
 import cat_scraper
 import cat_store
-
-
-def send_message(channel, msg, token):
-    response = requests.get(f'https://api.telegram.org/bot{token}/sendMessage?chat_id={channel}&text={msg}')
-    if not response.ok:
-        log.warning('Response from Telegram not OK. Status: %d, body: %s', response.status_code, response.text)
+import telegram_bot
 
 
 if __name__ == '__main__':
-    log.basicConfig(filename='scraper.log', encoding='utf-8', level=log.INFO, format='%(asctime)s %(levelname)s %(message)s')
+    log.basicConfig(filename='scraper.log', level=log.INFO, format='%(asctime)s %(levelname)s [%(module)s] %(message)s')
     load_dotenv(find_dotenv())
 
     url = os.environ.get('SCRAPE_URL')
@@ -37,9 +31,10 @@ if __name__ == '__main__':
     # Persist the cats to disk.
     store.save()
 
+    bot = telegram_bot.TelegramBot(telegram_token, channel_id)
+
     # Notify the channel about new cats.
     for cat in store.get_new_cats():
         log.info('New cat: %s', cat['name'])
         msg = f'There is a new cat called {cat["name"]}! 😻 See {cat["url"]}'
-        send_message(channel_id, msg, telegram_token)
-
+        bot.send_message(msg)
